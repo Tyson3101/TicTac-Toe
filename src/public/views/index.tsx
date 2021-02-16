@@ -2,32 +2,44 @@ import React from "react";
 import fetch from "node-fetch";
 import { useHistory } from "react-router";
 
-function Index({ url }: { url: string }) {
-  const history = useHistory();
+function Index({
+  baseURL,
+  RAWerror = "",
+}: {
+  baseURL: string;
+  RAWerror: string;
+}) {
   const gameRoom = React.useRef() as { current: HTMLInputElement };
-  const [error, setError] = React.useState("");
+  const [error, setError] = React.useState(RAWerror);
+  const history = useHistory();
+  function redirect(urltoGo: string) {
+    return (window.location.href = urltoGo);
+  }
   async function joinGame() {
+    if (!gameRoom.current.value) return;
     const data: { error?: string; roomID: string } = await fetch(
-      url + `/${gameRoom.current.value}`,
+      baseURL + `/${gameRoom.current.value}`,
       { method: "POST" }
     ).then((res) => res.json());
     if (data?.error) {
       setError(data.error);
     }
     if (data.roomID) {
-      history.push(url + `/${data.roomID}`);
+      redirect(baseURL + `/${data.roomID}`);
     }
   }
   async function createGame() {
+    console.log("Making Request!");
     const data: { error?: string; roomID: string } = await fetch(
-      url + "/create",
+      baseURL + "/create",
       { method: "POST" }
     ).then((res) => res.json());
+
     if (data?.error) {
       setError(data.error);
     }
     if (data.roomID) {
-      history.push(url + `/${data.roomID}`);
+      redirect(baseURL + `/${data.roomID}`);
     }
   }
   return (
@@ -43,7 +55,11 @@ function Index({ url }: { url: string }) {
             onClick={joinGame}
             value={"Join Game"}
           />
-          <span style={{ display: "block" }}>{error}</span>
+          <span
+            style={{ display: "block", fontSize: "2rem", fontWeight: "bolder" }}
+          >
+            {error}
+          </span>
         </p>
         <p>
           <input

@@ -1,7 +1,5 @@
 import React from "react";
-import ReactRouter from "react-router";
 import Socket from "socket.io-client";
-import fetch from "node-fetch";
 import getSquares from "../hooks/getSquares";
 import "../css/styles.css";
 
@@ -9,25 +7,60 @@ type Players = "X" | "0";
 
 function Game({
   roomID,
-  inintalSquares,
+  squares: inintalSquares,
   me = "0",
-  inintalPlayer,
+  currentPlayer: inintalPlayer,
+  players: inintalPlayers,
 }: {
   roomID: string;
-  inintalSquares: { player: Players | null; position: number }[];
+  squares: { player: Players | null; position: number }[];
   me: Players;
-  inintalPlayer: Players;
+  currentPlayer: Players;
+  players: Players[];
 }) {
   const io = Socket.io("/");
 
-  const [player, setPlayer] = React.useState(inintalPlayer as Players);
+  io.on("playerJoined", ({ roomID: checkRoomID }: { roomID: string }) => {
+    if (checkRoomID !== roomID) return;
+    setPlayers([...players, "X"]);
+  });
+  const [players, setPlayers] = React.useState(inintalPlayers);
+  const [player, setPlayer] = React.useState(inintalPlayer);
+  const [myTurn, setTurn] = React.useState(inintalPlayer === me);
   const [squares, setSquares] = getSquares(inintalSquares);
 
   function changePlayer() {
-    if (player === "X") setPlayer("0");
-    else setPlayer("X");
-    return player;
+    setTurn(!myTurn);
+    setPlayer(player === "0" ? "X" : "0");
   }
+
+  function chosen(
+    square: { player: Players | null; position: number },
+    emit: boolean = true
+  ) {
+    if (square.player && !myTurn) return;
+    squares[square.position].player = player;
+    if (emit) io.emit("chosenServer", { roomID, player, square });
+    changePlayer();
+    setSquares(squares);
+  }
+
+  io.on(
+    "chosenGame",
+    ({
+      roomID: checkRoomID,
+      player,
+      square,
+    }: {
+      roomID: string;
+      player: "X" | "0";
+      square: { position: number; player: "X" | "0" | null };
+    }) => {
+      if (roomID !== checkRoomID) return;
+      if (player === me) return;
+      chosen(square, false);
+    }
+  );
 
   return (
     <>
@@ -36,9 +69,10 @@ function Game({
           <div
             key={square.position}
             onClick={() => {
-              squares[square.position].player = player;
-              changePlayer();
-              setSquares(squares);
+              chosen(square);
+            }}
+            style={{
+              cursor: myTurn && !square.player ? "pointer" : "not-allowed",
             }}
             className={"square" + square.position}
           >
@@ -51,9 +85,10 @@ function Game({
           <div
             key={square.position}
             onClick={() => {
-              squares[square.position].player = player;
-              changePlayer();
-              setSquares(squares);
+              chosen(square);
+            }}
+            style={{
+              cursor: myTurn && !square.player ? "pointer" : "not-allowed",
             }}
             className={"square" + square.position}
           >
@@ -66,9 +101,10 @@ function Game({
           <div
             key={square.position}
             onClick={() => {
-              squares[square.position].player = player;
-              changePlayer();
-              setSquares(squares);
+              chosen(square);
+            }}
+            style={{
+              cursor: myTurn && !square.player ? "pointer" : "not-allowed",
             }}
             className={"square" + square.position}
           >
