@@ -35,8 +35,4 @@ export default [
     position: 8,
     player: null,
   },
-  {
-    position: 9,
-    player: null,
-  },
 ] as { player: "X" | "0" | null; position: number }[];

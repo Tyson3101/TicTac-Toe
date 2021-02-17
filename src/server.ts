@@ -5,7 +5,7 @@ import HTTP from "http";
 import { Server, Socket } from "socket.io";
 import registor from "@react-ssr/express/register";
 import { v4 as uuidv4 } from "uuid";
-import inintialSquares from "./public/hooks/intitialSquares";
+import intitialSquares from "./public/hooks/intitialSquares";
 
 ENV.config();
 const app = express();
@@ -28,7 +28,13 @@ interface Game {
   currentPlayer: "X" | "0";
 }
 
-const games: { [key: string]: Game } = {};
+const games: { [key: string]: Game } = {
+  test: {
+    squares: intitialSquares,
+    players: [],
+    currentPlayer: null!,
+  },
+};
 
 app.get("/", (req, res) => {
   res.render("index", { baseURL: req.baseURL });
@@ -60,13 +66,13 @@ app.get("/:roomID", (req, res) => {
     game.players.push("X");
   }
   res.render("game", { ...game, baseURL: req.baseURL, roomID, me });
-  io.sockets.emit("playerJoined", { roomID });
+  io.sockets.emit("playerJoined", { roomID, ...game });
 });
 
 app.post("/create", (req, res) => {
   const roomID = uuidv4();
   games[roomID] = {
-    squares: inintialSquares,
+    squares: intitialSquares,
     players: [],
     currentPlayer: null!,
   };
@@ -87,6 +93,28 @@ app.post("/:roomID", (req, res) => {
   res.json({ roomID });
 });
 
+const checkIfWinner = (player: "X" | "0", game: Game) => {
+  const possibleCombinations: number[][] = [
+    [0, 1, 2],
+    [3, 4, 5],
+    [6, 7, 8],
+    [0, 3, 6],
+    [1, 4, 7],
+    [2, 5, 8],
+    [0, 4, 8],
+    [2, 4, 6],
+  ];
+
+  const winner = possibleCombinations.find((combination) => {
+    if (
+      combination.filter((position) => game.squares[position].player === player)
+        .length === combination.length
+    )
+      return combination;
+  });
+  return { winningSquares: winner ?? [], winner: winner ? player : false };
+};
+
 io.on("connect", (socket: Socket) => {
   socket.on(
     "chosenServer",
@@ -100,12 +128,31 @@ io.on("connect", (socket: Socket) => {
       square: { position: number; player: "X" | "0" | null };
     }) => {
       const game = games[roomID];
+      if (!square)
+        return (() => {
+          if (player === "0") game.currentPlayer = "X";
+          else game.currentPlayer = "0";
+          io.sockets.emit("chosenGame", {
+            roomID,
+            player,
+            square,
+            gotWinner: {
+              winner: false,
+              winningSquares: [],
+            },
+          });
+        })();
       game.squares[square.position].player = player;
-      game.currentPlayer = player === "0" ? "X" : "0";
+      if (player === "0") game.currentPlayer = "X";
+      else game.currentPlayer = "0";
+
+      const gotWinner = checkIfWinner(player, game).winner;
+      console.log(gotWinner);
       io.sockets.emit("chosenGame", {
         roomID,
         player,
         square,
+        gotWinner,
       });
     }
   );
