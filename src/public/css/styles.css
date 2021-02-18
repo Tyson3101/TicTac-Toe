@@ -12,7 +12,7 @@ body {
   justify-content: center;
   align-items: center;
   display: grid;
-  margin-top: 15vh;
+  margin-top: 4vh;
   gap: 0;
   grid-template-areas:
     "top"
@@ -39,7 +39,6 @@ body {
 .bottom div {
   cursor: pointer;
   display: inline-block;
-  background-color: #92d192;
   height: 200px;
   width: 200px;
   outline: none;

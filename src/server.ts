@@ -30,7 +30,7 @@ interface Game {
 
 const games: { [key: string]: Game } = {
   test: {
-    squares: intitialSquares,
+    squares: [...intitialSquares],
     players: [],
     currentPlayer: null!,
   },
@@ -72,7 +72,7 @@ app.get("/:roomID", (req, res) => {
 app.post("/create", (req, res) => {
   const roomID = uuidv4();
   games[roomID] = {
-    squares: intitialSquares,
+    squares: [...intitialSquares],
     players: [],
     currentPlayer: null!,
   };
@@ -112,6 +112,7 @@ const checkIfWinner = (player: "X" | "0", game: Game) => {
     )
       return combination;
   });
+  console.log(game.squares, intitialSquares);
   return { winningSquares: winner ?? [], winner: winner ? player : false };
 };
 
@@ -128,25 +129,11 @@ io.on("connect", (socket: Socket) => {
       square: { position: number; player: "X" | "0" | null };
     }) => {
       const game = games[roomID];
-      if (!square)
-        return (() => {
-          if (player === "0") game.currentPlayer = "X";
-          else game.currentPlayer = "0";
-          io.sockets.emit("chosenGame", {
-            roomID,
-            player,
-            square,
-            gotWinner: {
-              winner: false,
-              winningSquares: [],
-            },
-          });
-        })();
       game.squares[square.position].player = player;
       if (player === "0") game.currentPlayer = "X";
       else game.currentPlayer = "0";
 
-      const gotWinner = checkIfWinner(player, game).winner;
+      const gotWinner = checkIfWinner(player, game);
       console.log(gotWinner);
       io.sockets.emit("chosenGame", {
         roomID,
@@ -156,6 +143,15 @@ io.on("connect", (socket: Socket) => {
       });
     }
   );
+  socket.on("resetGameServer", ({ roomID }: { roomID: string }) => {
+    const game = games[roomID];
+    games[roomID] = {
+      ...game,
+      currentPlayer: "0",
+      squares: [...intitialSquares],
+    };
+    io.sockets.emit("resetGame", { roomID });
+  });
 });
 
 http.listen(PORT, () => console.log(`http://localhost:${PORT}`));

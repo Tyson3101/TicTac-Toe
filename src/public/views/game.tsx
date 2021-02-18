@@ -26,7 +26,9 @@ function Game({
   const [players, setPlayers] = React.useState(inintalPlayers);
   const [player, setPlayer] = React.useState(inintalPlayer);
   const [myTurn, setTurn] = React.useState(inintalPlayer === me);
-  const [squares, setSquares] = React.useState(inintalSquares);
+  const [squares, setSquares] = React.useState(
+    [...inintalSquares] ?? [...getSquares]
+  );
   const [anyNotfication, setAnyNotfication] = React.useState(
     null as null | string
   );
@@ -42,6 +44,10 @@ function Game({
     if (players.length !== 2) setAnyNotfication("Waiting for other player...");
     else setAnyNotfication(null);
   }, [players]);
+  React.useEffect(() => {
+    if (winner?.winner === false || !winner?.winner) return;
+    setAnyNotfication(`${winner.winner} wins!`);
+  }, [winner]);
   if (!roomID)
     return <div>{index({ baseURL: baseURL, RAWerror: "Unknown Error!" })}</div>;
 
@@ -72,6 +78,16 @@ function Game({
     changePlayer();
     setSquares(squares);
   }
+
+  io.on("resetGame", ({ roomID: checkRoomID }: { roomID: string }) => {
+    if (checkRoomID !== roomID) return;
+    setSquares([...getSquares]);
+    setTurn(me === "0");
+    setWinner(null! as { winner: Players | false; winningSquares: number[] });
+    setPlayer("0");
+    setAnyNotfication(null as null | string);
+    setTurnNotfication("Circles turn!");
+  });
 
   function chosenEmit(
     square: { player: Players | null; position: number },
@@ -112,6 +128,16 @@ function Game({
 
   return (
     <>
+      <div
+        style={{
+          marginTop: "20px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <h1>You are {me === "X" ? "Crosses" : "Circles"}</h1>
+      </div>
       <div className="top">
         {squares.slice(0, 3).map((square) => (
           <div
@@ -186,14 +212,34 @@ function Game({
           justifyContent: "center",
         }}
       >
-        {!anyNotfication || !winner.winner ? (
+        {!anyNotfication ? (
           <h1>
             <ul>
-              <li>{turnNotfication}</li>
+              <li style={{ listStyle: "none" }}>{turnNotfication}</li>
             </ul>
           </h1>
         ) : (
-          <h1>{anyNotfication ?? winner.winner}</h1>
+          <>
+            <h1>
+              {anyNotfication}
+              {anyNotfication.includes("wins") ? (
+                <button
+                  style={{
+                    backgroundColor: "black",
+                    color: "white",
+                    display: "block",
+                    height: "3vh",
+                    width: "3vw",
+                  }}
+                  onClick={() => io.emit("resetGameServer", { roomID })}
+                >
+                  Reset
+                </button>
+              ) : (
+                ""
+              )}
+            </h1>
+          </>
         )}
       </div>
     </>

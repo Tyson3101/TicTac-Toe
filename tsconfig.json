@@ -8,7 +8,8 @@
     "strict": true,
     "allowJs": true,
     "skipLibCheck": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "resolveJsonModule": true
   },
   "exclude": ["node_modules", "dist", "ssr.config.js"]
 }
